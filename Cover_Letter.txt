@@ -1,0 +1,17 @@
+Subject: xDPU – a new heterogeneous architecture for power‑constrained, no‑moving‑parts computing
+
+Body:
+
+Dear Interest_Party,
+
+I’ve been exploring an architecture that combines a slim CPU, PPU, MPU, NPU, and GPU in a 3D‑stacked package with shared cache, silicon photonics interconnects, and thermal interleaving. The goal is to eliminate redundant logic and active cooling, targeting 65‑80% lower total system power for mixed workloads (AI, graphics, physics). No moving parts makes it suitable for space/vacuum.
+
+A 2‑page executive summary and full whitepaper are attached (or linked). Every subsystem already exists separately; integration is the missing step. I’m looking for collaborators to simulate, FPGA‑prototype, or even tape out a test chip.
+
+Would you be open to a 10‑minute chat to see if this aligns with your group’s interests?
+
+Best regards,
+Chanh Ong
+Self curiousity
+https://github.com/chanhong/xDPU-architecture
+(a generic letter to summary what xDPU is about)
