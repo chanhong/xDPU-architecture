@@ -7,7 +7,7 @@
 \usepackage{cite}
 
 \title{xDPU: A Heterogeneous, Optically-Interconnected, 3D-Stacked Processing Unit\\ 
-\large for Extreme Power Efficiency and No-Moving-Parts Reliability}
+\large for Extreme Power Efficiency, No-Moving-Parts Reliability, and Built-in Security}
 
 \author{Architecture Whitepaper}
 \date{\today}
@@ -17,7 +17,7 @@
 \twocolumn[
 \maketitle
 \begin{abstract}
-The end of Dennard scaling and the rise of edge, mobile, and space computing demand a radical departure from general-purpose CPUs. The xDPU (Cross-Domain Dedicated Processing Unit) integrates a slim control CPU, a parallelization unit (PPU), a central math unit (MPU), a neural engine (NPU), and a graphics core (GPU) into a single 3D-stacked package. Shared cache, on-chip silicon photonics, and thermal interleaving eliminate redundant data movement and active cooling. This paper presents the architecture, operation, power estimates, and a roadmap to implementation.
+The end of Dennard scaling and the rise of edge, mobile, and space computing demand a radical departure from general-purpose CPUs. The xDPU (Cross-Domain Dedicated Processing Unit) integrates a slim control CPU, a parallelization unit (PPU), a central math unit (MPU), a neural engine (NPU), a graphics core (GPU), and a \textbf{secure processing unit (SPU)} into a single 3D-stacked package. Shared cache, on-chip silicon photonics, and thermal interleaving eliminate redundant data movement and active cooling. The SPU provides isolated TPM, DRM, and cryptographic functions. This paper presents the architecture, operation, power estimates, and a roadmap to implementation.
 \end{abstract}
 ]
 
@@ -28,13 +28,14 @@ Modern system-on-chips (SoCs) rely on a few large CPU cores augmented by fixed-f
 \item \textbf{Redundant logic} – CPUs include ALUs/FPUs that duplicate accelerator capabilities.
 \item \textbf{Costly data movement} – cache coherency across separate dies wastes power.
 \item \textbf{Thermal constraints} – fans and pumps fail in vacuum or high-vibration environments (space, deep drilling).
+\item \textbf{Security isolation} – software-based TEEs (Trusted Execution Environments) are vulnerable to side-channel attacks.
 \end{itemize}
-The xDPU solves these by \textbf{specialisation, optical communication, and passive thermal management}.
+The xDPU solves these by \textbf{specialisation, optical communication, passive thermal management, and hardware-isolated security}.
 
 \section{Architectural Overview}
 
 \subsection{Processing Tiles}
-All tiles are \textbf{3D-stacked} and communicate via a shared last-level cache (LLC) and optical links.
+All tiles are \textbf{3D-stacked} and communicate via a shared last-level cache (LLC) and optical links (except the SPU, which uses a dedicated bus to the CPU).
 
 \begin{table}[ht]
 \centering
@@ -46,9 +47,10 @@ All tiles are \textbf{3D-stacked} and communicate via a shared last-level cache 
 \midrule
 Slim CPU & Sequential control, dispatch, I/O & In-order, no FPU/SIMD, tiny L0 I-cache \\
 PPU & Parallelisation & Hardware task-graph generator, dependency analysis \\
-MPU & Central math engine & FP/INT ALUs, transcendental (sin, log, etc.) \\
+MPU & Central math engine & FP/INT ALUs, transcendental (sin, log, etc.); supports AVX2-width vectors \\
 NPU & Neural inference & Systolic array, sparse tensor core \\
 GPU & Graphics \& massive parallel compute & Shader cores, texture units, rasteriser \\
+SPU & Secure processing & Isolated microcontroller, hardware crypto (AES-256, SHA-256, RSA, ECC), OTP memory, tamper detection \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -58,13 +60,15 @@ GPU & Graphics \& massive parallel compute & Shader cores, texture units, raster
 \item \textbf{L2 slices} (256 KiB each) distributed across tiles, aggregated as a shared L3 via directory.
 \item \textbf{Coherence} – directory-based with optical snooping; no write-invalidates over electrical buses.
 \item \textbf{Benefits} – MPU results written once, read by NPU/GPU without DRAM traffic.
+\item \textbf{SPU exception} – SPU does not share the LLC; it has its own tiny secure SRAM (64-256 KiB) and cannot be DMAed by other tiles.
 \end{itemize}
 
 \subsection{Optical Interconnects}
 \begin{itemize}
 \item \textbf{Physical layer} – silicon waveguides, ring modulators, Ge photodetectors (e.g., GlobalFoundries Fotonix).
-\item \textbf{Topology} – 2D mesh over the 3D stack; each tile has an optical interface.
+\item \textbf{Topology} – 2D mesh over the 3D stack; each non-secure tile has an optical interface.
 \item \textbf{Energy} – \(<100\) fJ/bit (vs. \(>1\) pJ/bit for long electrical lines). Latency \(\sim1\) ns per hop.
+\item \textbf{SPU exception} – SPU communicates with slim CPU via a dedicated, encrypted bus (e.g., I2C or APB) to prevent side-channel leaks through optics.
 \end{itemize}
 
 \subsection{3D Stacking \& Thermal Interleaving}
@@ -72,7 +76,7 @@ GPU & Graphics \& massive parallel compute & Shader cores, texture units, raster
 \textbf{Stack order (bottom to top, through-silicon vias – TSVs):}
 \begin{enumerate}
 \item Thermal spreader (diamond or pyrolytic graphite)
-\item Cool tiles: LLC slices, MPU
+\item Cool tiles: LLC slices, MPU, SPU
 \item Warm tiles: PPU, NPU
 \item Hot tiles: Slim CPU, GPU
 \item Top radiative coating
@@ -80,35 +84,58 @@ GPU & Graphics \& massive parallel compute & Shader cores, texture units, raster
 
 \textbf{Holes:} TSVs for power/ground and \textbf{thermal vias} (copper or diamond-filled) to conduct heat laterally/vertically. No microfluidic channels – fully solid-state.
 
+\subsection{SPU (Secure Processing Unit) – Detailed}
+
+The SPU is a \textbf{simple, secure microcontroller} running at low frequency (100–300 MHz) to minimise side-channel leakage. It includes:
+\begin{itemize}
+\item \textbf{Hardware crypto engines} – AES-256 (GCM, CBC), SHA-256, SHA-3, RSA-4096, ECDSA (P-256/384).
+\item \textbf{True Random Number Generator (TRNG)}.
+\item \textbf{Secure non-volatile storage} – 256 KiB OTP, plus small flash/eFuses for keys.
+\item \textbf{Tamper detection} – active shield, temperature/voltage sensors, zeroisation logic.
+\item \textbf{Isolated power domain} – can remain powered while other tiles are off.
+\end{itemize}
+
+\textbf{Typical use cases:}
+\begin{itemize}
+\item Platform attestation (measured boot, TPM 2.0).
+\item DRM decryption (e.g., Widevine L1, PlayReady).
+\item Key storage (disk encryption, secure boot).
+\item Hardware-accelerated TLS for embedded servers.
+\end{itemize}
+
+The slim CPU sends commands to the SPU via a \textbf{mailbox} – a small shared SRAM (4 KiB) with hardware encryption. The SPU never executes code from untrusted memory.
+
 \section{Operation Modes \& Task Flow}
 
 \subsection{Sequential to Parallel Conversion}
 \begin{enumerate}
-\item \textbf{Slim CPU} receives a high-level request (e.g., “upscale this video with AI + motion blur”).
+\item \textbf{Slim CPU} receives a high-level request (e.g., “decrypt this DRM-protected video and upscale it with AI”).
 \item \textbf{PPU} decomposes into a dependency graph:
       \begin{itemize}
+      \item SPU → decrypt content key and license
       \item NPU → AI upscaling (frame by frame)
-      \item GPU → motion interpolation
+      \item GPU → motion interpolation + rendering
       \item MPU → blending math
       \end{itemize}
-\item PPU dispatches directly to each tile via optical link, waking them from power-gate.
+\item PPU dispatches directly to each tile via optical link (except SPU via mailbox), waking them from power-gate.
 \item CPU sleeps until completion interrupt.
 \end{enumerate}
 
 \subsection{Data Movement Minimisation}
 \begin{itemize}
-\item \textbf{Shared LLC} – MPU writes results to a cache line; NPU reads same line.
+\item \textbf{Shared LLC} – MPU writes results to a cache line; NPU/GPU reads same line.
 \item \textbf{Optical forwarding} – GPU reads texture data directly from CPU’s LLC slice without evicting to DRAM.
 \item \textbf{No redundant copies} – zero-copy semantics enforced by hardware.
+\item \textbf{Secure channel} – SPU sends clear keys to GPU via a dedicated, encrypted one-way path (bypassing CPU and LLC).
 \end{itemize}
 
 \subsection{Race-to-Idle Power Management}
-All tiles run at maximum frequency to finish the job as fast as possible. After completion, tiles enter \textbf{clock gating} (sub 1 mW) or \textbf{power gating} (near-zero leakage). Optical links shutdown after 10 µs inactivity.
+All tiles run at maximum frequency to finish the job as fast as possible. After completion, tiles enter \textbf{clock gating} (sub 1 mW) or \textbf{power gating} (near-zero leakage). Optical links shutdown after 10 µs inactivity. SPU may remain powered in low‑power mode to monitor tamper sensors.
 
 \section{Power \& Thermal Analysis (Estimated)}
 
 \subsection{Power Breakdown vs. Conventional SoC}
-Workload: 4K video with AI upscaling + optical flow (30 fps), 7 nm process.
+Workload: 4K video with AI upscaling + optical flow + DRM decryption (30 fps), 7 nm process.
 
 \begin{table}[ht]
 \centering
@@ -118,21 +145,22 @@ Workload: 4K video with AI upscaling + optical flow (30 fps), 7 nm process.
 \toprule
 \textbf{Component} & \textbf{Conventional (W)} & \textbf{xDPU (W)} \\
 \midrule
-CPU        & 3.0 & 0.3 \\
-GPU        & 5.0 & 4.0 \\
-NPU        & 2.0 & 2.0 \\
+CPU (including TEE overhead) & 3.0 & 0.3 \\
+GPU & 5.0 & 4.0 \\
+NPU & 2.0 & 2.0 \\
 DRAM access & 4.0 & 1.2 \\
+SPU & (included in CPU) & 0.1 \\
 \midrule
-\textbf{Total} & \textbf{14.0} & \textbf{7.5} \\
+\textbf{Total} & \textbf{14.0} & \textbf{7.6} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-For mixed AI + physics + graphics workloads, total system power is \textbf{65–80\% lower} (idle intervals dominate).
+For mixed AI + physics + graphics + security workloads, total system power is \textbf{65–80\% lower} (idle intervals dominate).
 
 \subsection{Thermal Performance}
 \begin{itemize}
-\item \textbf{Power density} – 20 W/mm² hot spots (GPU) interleaved with 0.5 W/mm² cache → effective peak temperature rise \(\Delta T = 35^\circ\)C above ambient.
+\item \textbf{Power density} – 20 W/mm² hot spots (GPU) interleaved with 0.5 W/mm² cache and 0.1 W/mm² SPU → effective peak temperature rise \(\Delta T = 35^\circ\)C above ambient.
 \item \textbf{Passive cooling} – natural convection + radiative emission (\(\varepsilon=0.9\) coating) + chassis conduction.
 \item \textbf{Maximum ambient} – 45 °C (spacecraft interior) keeps junction \(<85^\circ\)C. No fans, no pumps.
 \end{itemize}
@@ -148,10 +176,10 @@ For mixed AI + physics + graphics workloads, total system power is \textbf{65–
 \textbf{Domain} & \textbf{Why xDPU Wins} \\
 \midrule
 Deep space probes & No moving parts – survives launch vibration \& vacuum; radiation-tolerant optics. \\
-Smartphones / wearables & Lower active power → 2× battery life; cooler surface. \\
-Edge AI cameras (traffic, security) & Real-time NPU + MPU + GPU without fan → sealed enclosures. \\
-High-performance drones / robots & Lightweight, no vibration-sensitive cooling, fast race-to-idle. \\
-Data center “cold storage” nodes & Passive cooling reduces PUE (Power Usage Effectiveness). \\
+Smartphones / wearables & Lower active power → 2× battery life; cooler surface; SPU handles payments/DRM. \\
+Edge AI cameras with DRM & Real-time NPU + MPU + GPU without fan; SPU protects decryption keys. \\
+Secure edge servers & Hardware-isolated TPM and crypto; no CPU overhead for encryption. \\
+Data center “cold storage” & Passive cooling reduces PUE; SPU manages encryption keys. \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -166,10 +194,10 @@ Data center “cold storage” nodes & Passive cooling reduces PUE (Power Usage 
 \toprule
 \textbf{Phase} & \textbf{Description} \\
 \midrule
-1 – Simulation (6 months) & Extend Gem5 with xDPU tiles; validate \(>\)50\% power reduction. \\
-2 – FPGA Emulation (1 year) & Single tile on Xilinx Alveo; emulate optical link via high-speed transceivers. \\
-3 – Chiplet Prototype (2-3 years) & 28 nm or 65 nm chiplets, 3D stacking, thermal vias test chip. \\
-4 – Full xDPU (5 years) & Monolithic 7 nm/5 nm or advanced chiplet integration (UCIe), integrated photonics. \\
+1 – Simulation (6 months) & Extend Gem5 with xDPU tiles (including SPU model); validate \(>\)50\% power reduction. \\
+2 – FPGA Emulation (1 year) & Single tile (CPU+MPU+SPU+cache) on Xilinx Alveo; emulate optical link via high-speed transceivers; test SPU isolation. \\
+3 – Chiplet Prototype (2-3 years) & 28 nm or 65 nm chiplets, 3D stacking, thermal vias test chip; SPU on separate power domain. \\
+4 – Full xDPU (5 years) & Monolithic 7 nm/5 nm or advanced chiplet integration (UCIe), integrated photonics; SPU with active shield. \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -187,19 +215,21 @@ Data center “cold storage” nodes & Passive cooling reduces PUE (Power Usage 
 Optical link temperature sensitivity & Athermal design + closed-loop heater control; drift \(<0.1\) nm/°C. \\
 3D stacking heat removal & Interleaving + thermal TSVs + diamond heat spreader (2000 W/m·K). \\
 Coherence across optical links & Directory-based with speculative optical probing (2-3 cycle latency). \\
-Software ecosystem & Extend OpenCL 3.0, ONNX Runtime; provide LLVM backend for slim CPU. \\
+Software ecosystem & Extend OpenCL 3.0, ONNX Runtime; provide LLVM backend for slim CPU; SPU firmware toolchain. \\
 Manufacturing cost & High-volume markets (phones, laptops) amortise; space-grade tolerates lower volume. \\
+SPU isolation & Separate power/clock, dedicated bus, active shield, TVLA side-channel testing. \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \section{Conclusion}
 
-The xDPU redefines heterogeneous computing for a future where \textbf{power efficiency and reliability} trump raw general-purpose performance. By integrating a slim CPU, dedicated accelerators, shared cache, optical interconnects, and thermal interleaving into a single 3D-stacked package, the xDPU achieves:
+The xDPU redefines heterogeneous computing for a future where \textbf{power efficiency, reliability, and security} are paramount. By integrating a slim CPU, dedicated accelerators (PPU, MPU, NPU, GPU, SPU), shared cache, optical interconnects, and thermal interleaving into a single 3D-stacked package, the xDPU achieves:
 \begin{itemize}
 \item \textbf{65–80\% lower total system power} for mixed workloads.
 \item \textbf{No moving parts} – ideal for space and vibration-prone environments.
 \item \textbf{Passive cooling} – eliminates fans and liquid pumps.
+\item \textbf{Hardware-isolated security} – SPU protects keys and DRM without performance penalty.
 \end{itemize}
 
 Every subsystem already exists as a separate research prototype; integration is the remaining engineering challenge. We invite academic and industrial partners to collaborate on simulation, prototyping, and standardisation.
@@ -209,10 +239,12 @@ Every subsystem already exists as a separate research prototype; integration is 
 \bibitem{foveros} Intel Foveros 3D stacking technology.
 \bibitem{ayar} Ayar Labs – optical I/O for compute.
 \bibitem{tpu} Google TPUv4: systolic array NPU.
-\bibitem{apple} Apple M2 / M3 matrix coprocessor (MPU analogue).
+\bibitem{apple} Apple M2 / M3 matrix coprocessor (MPU analogue) and Secure Enclave (SPU analogue).
 \bibitem{gf} GlobalFoundries Fotonix™ – monolithic silicon photonics platform.
 \bibitem{mitll} MIT Lincoln Laboratory – thermal via arrays for 3D ICs.
 \bibitem{gem5} Gem5 simulator – architectural modelling.
+\bibitem{tpm} TCG TPM 2.0 Library Specification.
+\bibitem{widevine} Google Widevine L1 DRM – hardware security requirements.
 \end{thebibliography}
 
 \appendix
@@ -229,10 +261,14 @@ PPU  & Parallelization Processing Unit \\
 MPU  & Math Processing Unit \\
 NPU  & Neural Processing Unit \\
 GPU  & Graphics Processing Unit \\
+SPU  & Secure Processing Unit \\
 LLC  & Last-Level Cache \\
 TSV  & Through-Silicon Via \\
 PIC  & Photonic Integrated Circuit \\
 UCIe & Universal Chiplet Interconnect Express \\
+TPM  & Trusted Platform Module \\
+DRM  & Digital Rights Management \\
+OTP  & One-Time Programmable (memory) \\
 \bottomrule
 \end{tabular}
 \end{table}

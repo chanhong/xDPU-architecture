@@ -1,33 +1,36 @@
-xDPU Executive Summary – Page 1 of 2
+xDPU Executive Summary – Page 1 of 2 (updated with SPU)
 
 WHAT IS xDPU?
 The xDPU (Cross‑Domain Dedicated Processing Unit) is a single 3D‑stacked chip containing:
 - Slim CPU (in‑order, no FPU/SIMD – just control)
 - PPU (hardware task‑graph paralleliser)
-- MPU (central math engine – FP/INT/transcendental)
+- MPU (central math engine – FP/INT/transcendental; includes AVX2-level vectors)
 - NPU (systolic neural engine)
 - GPU (shader cores for graphics & compute)
-- Shared last‑level cache (distributed L2/L3)
-- Optical interconnects (silicon photonics)
+- SPU (Secure Processing Unit – isolated TPM/DRM/crypto)
+- Shared last‑level cache (for non‑secure tiles)
+- Optical interconnects (silicon photonics, SPU excluded)
 - Thermal vias + interleaving (hot/cool tiles)
 
 WHY IT’S DIFFERENT
 - No moving parts → no fans, no pumps; survives space vacuum & vibration
 - Passive cooling only (radiative + conductive)
-- 65‑80% lower total system power for mixed workloads (est. based on 7nm)
+- 65-80% lower total system power for mixed workloads (est. based on 7nm)
+- Built‑in hardware security (TPM 2.0, DRM, key storage) without performance penalty
 - Race‑to‑idle: tiles finish fast, then power‑gate
 
-KEY NUMBERS (vs. conventional SoC, same 7nm, 4K AI+video task)
+KEY NUMBERS (vs. conventional SoC, same 7nm, 4K AI+video+DRM task)
 - CPU power: 3.0W → 0.3W  (90% reduction)
 - DRAM access power: 4.0W → 1.2W (70% reduction – shared cache + optics)
-- Total power: 14.0W → 7.5W (46% reduction; idle intervals push to 65‑80%)
+- SPU power: 0.1W (new, replaces CPU‑based TPM overhead)
+- Total power: 14.0W → 7.6W (46% reduction; idle intervals push to 65-80%)
 - Peak junction temp: <85°C at 45°C ambient, no airflow
 
-HOW IT WORKS
-1. Slim CPU receives high‑level request.
-2. PPU breaks it into dependency graph (e.g., NPU→AI upscale, GPU→motion, MPU→blend).
-3. PPU dispatches directly to tiles via optical links.
-4. Shared cache allows MPU results to be read by NPU/GPU without DRAM round‑trips.
+HOW IT WORKS (secure example)
+1. CPU sends encrypted license and key to SPU.
+2. SPU decrypts key inside its isolated SRAM, never exposes plaintext.
+3. SPU sets up GPU secure channel for content decryption.
+4. CPU sleeps, SPU monitors tamper sensors, GPU renders protected video.
 5. All tiles race to idle, then shut down.
 
 xDPU Executive Summary – Page 2 of 2
@@ -45,11 +48,14 @@ Phase 3 – Chiplet Prototype (2‑3 years, <$50k)
 Phase 4 – Full xDPU (5 years, commercial partner)
 → 7nm/5nm monolithic or UCIe chiplets with integrated photonics.
 
+
 WHAT WE NEED
 - Simulation experts (Gem5, Sniper)
 - FPGA / RTL designers (Verilog/VHDL for one tile)
 - Packaging / thermal engineers (3D stacking, thermal vias)
 - A motivated student team or startup to lead a tape‑out
+- Security architecture experts (for SPU isolation verification)
+- Same simulation, RTL, thermal, and packaging skills as before.
 
 NEXT STEPS
 - Read the full whitepaper (Markdown or LaTeX in the GitHub repo)
