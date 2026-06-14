@@ -60,7 +60,7 @@ SPU & Secure processing & Isolated microcontroller, hardware crypto (AES-256, SH
 \item \textbf{L2 slices} (256 KiB each) distributed across tiles, aggregated as a shared L3 via directory.
 \item \textbf{Coherence} – directory-based with optical snooping; no write-invalidates over electrical buses.
 \item \textbf{Benefits} – MPU results written once, read by NPU/GPU without DRAM traffic.
-\item \textbf{SPU exception} – SPU does not share the LLC; it has its own tiny secure SRAM (64-256 KiB) and cannot be DMAed by other tiles.
+\item \textbf{SPU exception} – SPU does not share the LLC; it has its own secure SRAM (64-256 KiB) and cannot be DMAed by other tiles.
 \end{itemize}
 
 \subsection{Optical Interconnects}
@@ -109,7 +109,7 @@ The slim CPU sends commands to the SPU via a \textbf{mailbox} – a small shared
 
 \subsection{Sequential to Parallel Conversion}
 \begin{enumerate}
-\item \textbf{Slim CPU} receives a high-level request (e.g., “decrypt this DRM-protected video and upscale it with AI”).
+\item \textbf{Slim CPU} receives a high-level request (e.g., "decrypt this DRM-protected video and upscale it with AI").
 \item \textbf{PPU} decomposes into a dependency graph:
       \begin{itemize}
       \item SPU → decrypt content key and license
@@ -124,7 +124,7 @@ The slim CPU sends commands to the SPU via a \textbf{mailbox} – a small shared
 \subsection{Data Movement Minimisation}
 \begin{itemize}
 \item \textbf{Shared LLC} – MPU writes results to a cache line; NPU/GPU reads same line.
-\item \textbf{Optical forwarding} – GPU reads texture data directly from CPU’s LLC slice without evicting to DRAM.
+\item \textbf{Optical forwarding} – GPU reads texture data directly from CPU's LLC slice without evicting to DRAM.
 \item \textbf{No redundant copies} – zero-copy semantics enforced by hardware.
 \item \textbf{Secure channel} – SPU sends clear keys to GPU via a dedicated, encrypted one-way path (bypassing CPU and LLC).
 \end{itemize}
@@ -179,7 +179,7 @@ Deep space probes & No moving parts – survives launch vibration \& vacuum; rad
 Smartphones / wearables & Lower active power → 2× battery life; cooler surface; SPU handles payments/DRM. \\
 Edge AI cameras with DRM & Real-time NPU + MPU + GPU without fan; SPU protects decryption keys. \\
 Secure edge servers & Hardware-isolated TPM and crypto; no CPU overhead for encryption. \\
-Data center “cold storage” & Passive cooling reduces PUE; SPU manages encryption keys. \\
+Data center "cold storage" & Passive cooling reduces PUE; SPU manages encryption keys. \\
 \bottomrule
 \end{tabular}
 \end{table}

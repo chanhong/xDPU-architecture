@@ -19,7 +19,7 @@ We are looking for collaborators to:
 
 - **Simulate** – extend Gem5 or Sniper to model xDPU tiles (including SPU)
 - **FPGA** – implement a single tile (e.g., CPU+MPU+SPU+shared cache) on Xilinx/Altera
-- **Tape out** – submit a test chip via Tiny Tapeout or Google’s Open MPW shuttle
+- **Tape out** – submit a test chip via Tiny Tapeout or Google's Open MPW shuttle
 - **Write** – co‑author an arXiv paper or IEEE conference submission
 
 ## Getting involved

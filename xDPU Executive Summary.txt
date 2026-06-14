@@ -12,12 +12,11 @@ The xDPU (Cross‑Domain Dedicated Processing Unit) is a single 3D‑stacked chi
 - Optical interconnects (silicon photonics, SPU excluded)
 - Thermal vias + interleaving (hot/cool tiles)
 
-WHY IT’S DIFFERENT
+WHY IT'S DIFFERENT
 - No moving parts → no fans, no pumps; survives space vacuum & vibration
 - Passive cooling only (radiative + conductive)
 - 65-80% lower total system power for mixed workloads (est. based on 7nm)
 - Built‑in hardware security (TPM 2.0, DRM, key storage) without performance penalty
-- Race‑to‑idle: tiles finish fast, then power‑gate
 
 KEY NUMBERS (vs. conventional SoC, same 7nm, 4K AI+video+DRM task)
 - CPU power: 3.0W → 0.3W  (90% reduction)
@@ -31,35 +30,27 @@ HOW IT WORKS (secure example)
 2. SPU decrypts key inside its isolated SRAM, never exposes plaintext.
 3. SPU sets up GPU secure channel for content decryption.
 4. CPU sleeps, SPU monitors tamper sensors, GPU renders protected video.
-5. All tiles race to idle, then shut down.
-
-xDPU Executive Summary – Page 2 of 2
 
 ROADMAP (realistic, low‑cost start)
-Phase 1 – Simulation (6 months, 1‑2 engineers)
+Phase 1 – Simulation (6 months, 1-2 engineers)
 → Extend Gem5 with xDPU tiles; validate power/performance.
 
 Phase 2 – FPGA Emulation (1 year, small team)
 → One tile (CPU+MPU+cache) on Xilinx Alveo; emulate optical link.
 
-Phase 3 – Chiplet Prototype (2‑3 years, <$50k)
+Phase 3 – Chiplet Prototype (2-3 years, <$50k)
 → 28nm or 65nm test chip via Tiny Tapeout / Google MPW; measure thermal interleaving.
 
 Phase 4 – Full xDPU (5 years, commercial partner)
 → 7nm/5nm monolithic or UCIe chiplets with integrated photonics.
-
 
 WHAT WE NEED
 - Simulation experts (Gem5, Sniper)
 - FPGA / RTL designers (Verilog/VHDL for one tile)
 - Packaging / thermal engineers (3D stacking, thermal vias)
 - A motivated student team or startup to lead a tape‑out
-- Security architecture experts (for SPU isolation verification)
-- Same simulation, RTL, thermal, and packaging skills as before.
 
 NEXT STEPS
 - Read the full whitepaper (Markdown or LaTeX in the GitHub repo)
 - Try the simulation or FPGA path yourself
 - Contact [Your Name] to discuss collaboration or sponsorship
-
-This is not science fiction – every component already exists separately. Integration is the only missing piece.
